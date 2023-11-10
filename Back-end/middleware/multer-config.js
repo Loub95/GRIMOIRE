@@ -1,8 +1,7 @@
-const express = require("express");
 const multer = require('multer'); // Importation du module multer pour la gestion des fichiers multipart
 const sharp = require("sharp");
 const fs = require("fs");
-const app = express();
+
 
 
 
@@ -19,29 +18,41 @@ const storage = multer.diskStorage({
   filename: (req, file, callback) => { // la fonction filename indique à multer d'utiliser le nom d'origine, de remplacer les espaces par des underscores et d'ajouter un timestamp
     const name = file.originalname.split(' ').join('_');
     const extension = MIME_TYPES[file.mimetype];
+    fs.access("./images", (error) => {
+    if (error) {
+      fs.mkdirSync("./images");
+    }
+  });
     callback(null, name + Date.now() + '.' + extension); // DATE NOW NOM DU FICHIER
   }
 
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage }).single('image')
+  const resizeimg = (req, res, next) => {
+    if( !req.file)
+     { return next()};
+    const filePath = req.file.path 
+    sharp(filePath)
+    .resize({ width: 160, height: 260 })
+    .toBuffer()
+    .then((data) => {
+        sharp(data)
+            .toFile(filePath)
+            .then(() => {
+                next()
+            })
+            .catch((error) => {
+                next(error)
+            })
+    }) 
+  }
+    
+  
+  
+  
+  //const link = `http://localhost:4000/${ref}`;
+  //return res.json({ link });
 
-app.post("/", upload.single("picture"), async (req, res) => {
-  fs.access("./uploads", (error) => {
-    if (error) {
-      fs.mkdirSync("./uploads");
-    }
-  });
-  const { buffer, originalname } = req.file;
-  const timestamp = new Date().toISOString();
-  const ref = `${timestamp}-${originalname}.webp`;
-  await sharp(buffer)
-    .webp({ quality: 20 })
-    .toFile("./uploads/" + ref);
-  const link = `http://localhost:4000/${ref}`;
-  return res.json({ link });
-});
-
-app.listen(4000);
-
-module.exports = multer({storage: storage}).single('image'); // Exportation du middleware multer configuré pour traiter un seul fichier avec le champ "image"
+module.exports = {upload, resizeimg}; 
+// Exportation du middleware multer configuré pour traiter un seul fichier avec le champ "image"
